@@ -1,0 +1,14 @@
+# thesauri_harvester-js:
+#   filter: rjsmin
+#   output: ckanext-thesauri_harvester/%(version)s-thesauri_harvester.js
+#   contents:
+#     - js/thesauri_harvester.js
+#   extra:
+#     preload:
+#       - base/main
+
+# thesauri_harvester-css:
+#   filter: cssrewrite
+#   output: ckanext-thesauri_harvester/%(version)s-thesauri_harvester.css
+#   contents:
+#     - css/thesauri_harvester.css

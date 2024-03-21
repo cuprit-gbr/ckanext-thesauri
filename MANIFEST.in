@@ -1,0 +1,5 @@
+include README.rst
+include LICENSE
+include requirements.txt
+recursive-include ckanext/thesauri_harvester *.html *.json *.js *.less *.css *.mo *.yml
+recursive-include ckanext/thesauri_harvester/migration *.ini *.py *.mako
