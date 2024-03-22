@@ -1,3 +1,5 @@
+import pytest
+
 """
 Tests for plugin.py.
 
