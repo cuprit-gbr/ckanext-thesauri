@@ -10,4 +10,3 @@ class ThesaurusWord(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     word = Column(String(250), unique=True, nullable=False, index=True)
 
-Index('ix_thesaurus_words_word', ThesaurusWord.word)
