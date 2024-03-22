@@ -2,7 +2,7 @@ import pytest
 from ckan.plugins import toolkit
 import ckanext.thesauri_harvester.plugin as plugin
 
-def is_plugin_loaded(name):
+def plugin_loaded(name):
     """Check if a plugin is loaded."""
     return name in toolkit.config['ckan.plugins']
 
