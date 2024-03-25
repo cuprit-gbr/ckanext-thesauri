@@ -22,7 +22,7 @@ def populate_database_from_json(filepath):
     """Populate the thesaurus table from a JSON file path, skipping duplicate words."""
     try:
         with open(filepath, "r") as json_file:
-            categories = json.load(json_file)
+            terms = json.load(json_file)  # Now expects a flat list of terms
     except (json.JSONDecodeError, IOError) as e:
         click.echo(f"Error: Could not read or decode the JSON file at {filepath}. {e}")
         return
@@ -33,14 +33,13 @@ def populate_database_from_json(filepath):
         session.query(ThesaurusWord).delete()
         session.commit()
 
-        for category, words in categories.items():
-            for word in words:
-                try:
-                    session.add(ThesaurusWord(word=word))
-                    session.commit()
-                except IntegrityError:
-                    session.rollback()  # Rollback the session to continue with the next word
-                    click.echo(f"Skipping duplicate word: {word}")
+        for term in terms:  # Directly iterate over the list of terms
+            try:
+                session.add(ThesaurusWord(word=term))
+                session.commit()
+            except IntegrityError:
+                session.rollback()  # Rollback the session to continue with the next word
+                click.echo(f"Skipping duplicate word: {term}")
 
         click.echo("The thesaurus table has been successfully populated.")
     except Exception as e:
