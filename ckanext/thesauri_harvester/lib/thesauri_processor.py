@@ -120,11 +120,12 @@ class ThesauriReorganizer:
         self.child_relations = "http://www.w3.org/2004/02/skos/core#narrower"
         self.top_level_parent_id = "http://thesauri.dainst.org/_fe65f286"
         self.names = "http://www.w3.org/2004/02/skos/core#prefLabel"
-        self.exclude_parent_terms = set(
-            ["Geopolitische Einheiten", "Natürliche Prozesse", "Raumbezogene Einheiten"]
-        )
+
         self.exclude_child_terms = set(
             [
+                "Geopolitische Einheiten", 
+                "Natürliche Prozesse", 
+                "Raumbezogene Einheiten", 
                 "Ereignisse",
                 "Forschungspraktiken",
                 "Fiktionale und übernatürliche Wesen",
@@ -133,6 +134,16 @@ class ThesauriReorganizer:
                 "Theoretische Konzepte",
                 "Sprachen",
                 "Truppeneinheiten",
+                "<nach Typ>",
+                "<nach Waren>",
+                "<nach Formen>",
+                "<nach Beigabenkomplex>",
+                "<nach Bestattungsart>",
+                "<nach Inhalt>",
+                "<nach Technik>",
+                "<nach Verzierung>",
+                "<nach Verwendung>",
+                "<nach Kontext>"
             ]
         )
 
@@ -159,20 +170,13 @@ class ThesauriReorganizer:
         flattened_data = {}
         mapping_dict = {}
         for element in data:
-            if (
-                self.parent_relation not in element
-                or element[self.parent_relation][0]["@id"] != self.top_level_parent_id
-            ):
-                continue
-            for e in element[self.names]:
-                if (
-                    e["@language"] == "de"
-                    and e["@value"] not in self.exclude_parent_terms
-                ):
+            for e in element.get(self.names, []):
+                if e["@language"] == "de" and e["@value"] not in self.exclude_child_terms:
                     de_term = e["@value"]
                     element_id = element["@id"]
-                    flattened_data[de_term] = []
-                    mapping_dict[element_id] = de_term
+                    if element_id not in mapping_dict:  # Ensure unique entries
+                        flattened_data[de_term] = []
+                        mapping_dict[element_id] = de_term
         return flattened_data, mapping_dict
 
     def find_relations(self, parent_key, data, childs):
@@ -203,23 +207,43 @@ class ThesauriReorganizer:
                     self.find_relations(relation["@id"], data, childs)
         return childs
 
+    def flatten_data(self, data):
+        """
+        Creates a flat dictionary of terms from the thesaurus data.
+        Args:
+            data (list): The thesaurus data to process, assumed to be a list of dictionaries.
+        Returns:
+            dict: A flat dictionary with each term as a key.
+        """
+        flat_dict = {}
+        for element in data:
+            prefLabels = element.get("http://www.w3.org/2004/02/skos/core#prefLabel", [])
+            for label in prefLabels:
+                if label.get("@language") == "de":
+                    term_value = label.get("@value")
+                    flat_dict[term_value] = True  # Value 'True' signifies the presence of the term.
+        return flat_dict
+    
+
     def reorganize_and_pickle(self):
-        """Reorganizes the thesaurus data and saves it as both a pickled object and a human-readable JSON file."""
+        """
+        Reorganizes the thesaurus data and saves it as a flat JSON file.
+        """
         data = self.load_data()
-        flattened_data, mapping_dict = self.find_parents_and_mapping(data)
+        flattened_terms = self.flatten_data(data)
 
-        for k in mapping_dict.keys():
-            flattened_data[mapping_dict[k]] = self.find_relations(k, data, [])
+        # Convert set to list for JSON serialization
+        flattened_terms_list = list(flattened_terms)
 
-        # Overwrite the pickle file with new content
+        # Serialize to JSON
+        with open(f"{self.output_file}.json", "w", encoding="utf-8") as file:
+            json.dump(flattened_terms_list, file, ensure_ascii=False, indent=4)
+
+        print(f"Reorganized thesaurus data saved to: {self.output_file}.json")
+
+        # Optionally serialize to Pickle
         with open(f"{self.output_file}.pickle", "wb") as file:
-            pickle.dump(flattened_data, file, protocol=pickle.HIGHEST_PROTOCOL)
-
-        # Overwrite the JSON file with new content
-        json_output_path = f"{self.output_file}.json"
-        with open(json_output_path, "w", encoding="utf-8") as file:
-            json.dump(flattened_data, file, ensure_ascii=False, indent=4)
-        print(f"Reorganized thesaurus data saved to: {json_output_path}")
+            pickle.dump(flattened_terms_list, file, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def main():
@@ -251,15 +275,44 @@ def main():
 
     # Inform about the saved file paths
     print(
-        f"Serialized RDF saved to: {processor.output_file}.{processor.format_suffix_mapping[processor.output_format]}"
+        f"- Harvested RDF from website saved to: {processor.output_file}.{processor.format_suffix_mapping[processor.output_format]}"
     )
     print(
-        f"Reorganized thesaurus data saved to: {reorganizer.output_file}.pickle and {reorganizer.output_file}.json"
+        f"- Reorganized thesaurus data saved to: {reorganizer.output_file}.pickle and {reorganizer.output_file}.json"
     )
     print(
-        f"The {reorganizer.output_file}.json file can be used to be imported with the second CLI command."
+        f"-- The {reorganizer.output_file}.json file can be used to be imported with the second CLI command."
     )
 
+# def main():
+#     start_time = time.time()  # Start timing
+
+#     # Path to the existing local JSON file with thesaurus data
+#     input_file_for_reorganizer = "/tmp/thesauri.json"
+    
+#     # Initialize the ThesauriReorganizer with the input and output paths
+#     reorganizer = ThesauriReorganizer(
+#         input_file_for_reorganizer,
+#         "/tmp/thesauri_reorganized",  # Output file path
+#     )
+    
+#     # Directly reorganize and serialize the thesaurus data from the local JSON file
+#     reorganizer.reorganize_and_pickle()
+
+#     # Calculate and print the time taken
+#     end_time = time.time()
+#     elapsed_time = end_time - start_time
+#     print(
+#         f"Thesaurus reorganization completed in {elapsed_time:.2f} seconds."
+#     )
+
+#     # Inform about the saved file paths
+#     print(
+#         f"- Reorganized thesaurus data saved to: {reorganizer.output_file}.pickle and {reorganizer.output_file}.json"
+#     )
+#     print(
+#         f"-- The {reorganizer.output_file}.json file can be used to be imported with the second CLI command."
+#     )
 
 if __name__ == "__main__":
     main()
