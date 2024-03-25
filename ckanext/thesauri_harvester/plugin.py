@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from ckan.model import Session
 import math
 from ckanext.thesauri_harvester.cli import get_commands
+from sqlalchemy import func  # Make sure to import func
 
 
 class ThesauriHarvesterPlugin(plugins.SingletonPlugin, toolkit.DefaultDatasetForm):
@@ -45,6 +46,9 @@ class ThesauriHarvesterPlugin(plugins.SingletonPlugin, toolkit.DefaultDatasetFor
         query = Session.query(ThesaurusWord)
         if search:
             query = query.filter(ThesaurusWord.word.ilike('%' + search + '%'))
+
+        # Add sorting by word length and then alphabetically
+        query = query.order_by(func.length(ThesaurusWord.word), ThesaurusWord.word)
 
         total_count = query.count()
         total_pages = math.ceil(total_count / float(per_page))
